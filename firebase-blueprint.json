@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information mapped to auth UID",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["owner", "admin"] },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email", "role", "businessId"]
+    },
+    "Business": {
+      "title": "Business",
+      "description": "shining.co business profile and general settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "tagline": { "type": "string", "maxLength": 120 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "timezone": { "type": "string", "maxLength": 50 },
+        "defaultMinStock": { "type": "number" },
+        "phone": { "type": "string", "maxLength": 30 },
+        "address": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "name", "currency"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Perfume inventory product entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "sku": { "type": "string", "maxLength": 50 },
+        "category": { "type": "string", "maxLength": 60 },
+        "bottleSizeMl": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "initialStock": { "type": "number" },
+        "currentStock": { "type": "number" },
+        "minStockAlert": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 300 },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "name", "sku", "costPrice", "sellingPrice", "currentStock"]
+    },
+    "CapitalTransaction": {
+      "title": "CapitalTransaction",
+      "description": "Initial capital or additional capital investments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["initial", "additional"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "source": { "type": "string", "maxLength": 120 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "type", "amount", "date"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Sales order and customer transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "invoiceNumber": { "type": "string", "maxLength": 50 },
+        "date": { "type": "string", "maxLength": 30 },
+        "productId": { "type": "string", "maxLength": 128 },
+        "productName": { "type": "string", "maxLength": 120 },
+        "quantity": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "discount": { "type": "number" },
+        "extraCost": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "amountPaid": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "cogs": { "type": "number" },
+        "grossProfit": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["tunai", "transfer", "qris", "ewallet", "lainnya"] },
+        "paymentStatus": { "type": "string", "enum": ["lunas", "belum_lunas", "sebagian"] },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "isCancelled": { "type": "boolean" },
+        "cancellationReason": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "invoiceNumber", "date", "productId", "quantity", "unitPrice", "totalAmount", "paymentStatus"]
+    },
+    "SalePayment": {
+      "title": "SalePayment",
+      "description": "Installment or settlement payments recorded for an existing sale",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "saleId": { "type": "string", "maxLength": 128 },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "paymentMethod": { "type": "string", "enum": ["tunai", "transfer", "qris", "ewallet", "lainnya"] },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "saleId", "amount", "date", "paymentMethod"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business expense breakdown entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 80 },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "paymentMethod": { "type": "string", "maxLength": 40 },
+        "paymentStatus": { "type": "string", "enum": ["lunas", "belum_lunas"] },
+        "description": { "type": "string", "maxLength": 250 },
+        "receiptRef": { "type": "string", "maxLength": 200 },
+        "isStockPurchase": { "type": "boolean" },
+        "linkedProductId": { "type": "string", "maxLength": 128 },
+        "stockQuantityAdded": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "category", "amount", "date", "description"]
+    },
+    "OtherIncome": {
+      "title": "OtherIncome",
+      "description": "Non-sales revenues, cashbacks, refunds, or other receipts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 80 },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "source": { "type": "string", "maxLength": 120 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "category", "amount", "date", "source"]
+    },
+    "InventoryMovement": {
+      "title": "InventoryMovement",
+      "description": "Audit trail log of all inventory changes (in, out, adjustment, return)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "businessId": { "type": "string", "maxLength": 128 },
+        "productId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["in", "out", "adjustment", "return"] },
+        "quantityDelta": { "type": "number" },
+        "previousStock": { "type": "number" },
+        "newStock": { "type": "number" },
+        "costPerUnit": { "type": "number" },
+        "reason": { "type": "string", "maxLength": 200 },
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerUid", "businessId", "productId", "type", "quantityDelta", "previousStock", "newStock", "reason", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profile documents"
+    },
+    "/businesses/{businessId}": {
+      "schema": "Business",
+      "description": "shining.co business settings and metadata"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Perfume inventory product records"
+    },
+    "/capitalTransactions/{transactionId}": {
+      "schema": "CapitalTransaction",
+      "description": "Initial and additional capital injection records"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Perfume sales orders"
+    },
+    "/salePayments/{paymentId}": {
+      "schema": "SalePayment",
+      "description": "Payment records and installments for sales"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Business expense entries"
+    },
+    "/otherIncome/{incomeId}": {
+      "schema": "OtherIncome",
+      "description": "Non-sales revenues, refunds, and receipts"
+    },
+    "/inventoryMovements/{movementId}": {
+      "schema": "InventoryMovement",
+      "description": "Stock audit trail records"
+    }
+  }
+}

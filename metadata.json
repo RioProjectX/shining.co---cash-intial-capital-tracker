@@ -1,0 +1,6 @@
+{
+  "name": "shining.co Business Tracker",
+  "description": "Smart business & cashflow tracker untuk shining.co parfum — pencatatan modal awal, stok produk, penjualan, pengeluaran, laba rugi, dan arus kas secara real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
