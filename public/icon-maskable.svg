@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F1E1B"/>
+      <stop offset="100%" stop-color="#141311"/>
+    </linearGradient>
+    <linearGradient id="goldGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2CCA8"/>
+      <stop offset="50%" stop-color="#C5A880"/>
+      <stop offset="100%" stop-color="#9E7D52"/>
+    </linearGradient>
+    <radialGradient id="glowMask" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#C5A880" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#C5A880" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Full-bleed background extending to outer boundaries for Android maskable circles/squircles -->
+  <rect width="512" height="512" fill="url(#bgGradMask)"/>
+
+  <!-- Centered within 80% safe zone (center 400x400) -->
+  <g transform="translate(51.2, 51.2) scale(0.8)">
+    <circle cx="256" cy="230" r="150" fill="url(#glowMask)"/>
+
+    <!-- Perfume Atomizer Cap & Spray Nozzle -->
+    <rect x="236" y="98" width="40" height="14" rx="3" fill="url(#goldGradMask)"/>
+    <rect x="248" y="112" width="16" height="24" fill="url(#goldGradMask)"/>
+    <rect x="220" y="136" width="72" height="20" rx="4" fill="url(#goldGradMask)"/>
+
+    <!-- Glass Perfume Bottle Body -->
+    <rect x="176" y="156" width="160" height="186" rx="28" fill="#24221E" stroke="url(#goldGradMask)" stroke-width="4"/>
+    <rect x="190" y="196" width="132" height="132" rx="16" fill="#1A1815" opacity="0.8"/>
+    <line x1="202" y1="216" x2="202" y2="306" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="3" stroke-linecap="round"/>
+
+    <line x1="256" y1="156" x2="256" y2="310" stroke="url(#goldGradMask)" stroke-width="2.5" stroke-opacity="0.8"/>
+
+    <!-- Label -->
+    <rect x="206" y="222" width="100" height="56" rx="6" fill="#FAF9F5"/>
+    <text x="256" y="246" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="bold" font-size="13" fill="#1A1A1A" letter-spacing="1">SHINING</text>
+    <circle cx="256" cy="254" r="2" fill="#9E7D52"/>
+    <text x="256" y="267" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="600" font-size="8" fill="#7C776D" letter-spacing="2">PARFUM</text>
+
+    <!-- Spray Mist Accent -->
+    <circle cx="206" cy="116" r="3.5" fill="url(#goldGradMask)"/>
+    <circle cx="188" cy="106" r="2.5" fill="url(#goldGradMask)" opacity="0.8"/>
+    <circle cx="172" cy="118" r="2" fill="url(#goldGradMask)" opacity="0.6"/>
+    <circle cx="196" cy="92" r="3" fill="url(#goldGradMask)" opacity="0.75"/>
+    <path d="M 236 122 Q 200 114 170 108" fill="none" stroke="url(#goldGradMask)" stroke-width="1.5" stroke-dasharray="2 4" opacity="0.6"/>
+
+    <!-- App Brand Text -->
+    <text x="256" y="396" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="700" font-size="34" fill="#FFFFFF" letter-spacing="1.5">shining.co</text>
+    <circle cx="352" cy="386" r="4.5" fill="url(#goldGradMask)"/>
+    <text x="256" y="426" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="500" font-size="13" fill="#A39D93" letter-spacing="3.5">BUSINESS TRACKER</text>
+  </g>
+</svg>

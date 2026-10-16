@@ -1,6 +1,7 @@
 import React from 'react';
 import { Menu, Plus, ShoppingBag, Package, TrendingDown, Coins } from 'lucide-react';
 import { SyncStatusBadge } from './SyncStatusBadge';
+import { PWAInstallButton } from './PWAInstallButton';
 import { useBusiness } from '../context/BusinessContext';
 
 interface Props {
@@ -30,8 +31,9 @@ export const Navbar: React.FC<Props> = ({ title, onOpenMobile, onQuickAction }) 
         </div>
       </div>
 
-      {/* Right: Sync Badge & Quick Action Buttons */}
-      <div className="flex items-center gap-2.5">
+      {/* Right: PWA Install, Sync Badge & Quick Action Buttons */}
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        <PWAInstallButton variant="navbar" />
         <SyncStatusBadge status={syncStatus} lastSyncTime={lastSyncTime} />
 
         {/* Quick Actions Desktop */}

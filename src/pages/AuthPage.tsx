@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { PWAInstallButton } from '../components/PWAInstallButton';
 import {
   Mail,
   Lock,
@@ -206,7 +207,12 @@ export const AuthPage: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-[11px] text-[#8C887E] mt-6 text-center">
+      {/* PWA App Download Banner */}
+      <div className="w-full max-w-md mt-4">
+        <PWAInstallButton variant="banner" />
+      </div>
+
+      <p className="text-[11px] text-[#8C887E] mt-4 text-center">
         Data bisnis shining.co tersimpan terenkripsi di Google Cloud Firestore.
       </p>
     </div>

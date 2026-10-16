@@ -89,6 +89,11 @@ Banyak pelaku bisnis parfum mandiri mengalami kesulitan mengukur keuntungan riil
 - **Performa Penjualan per Varian**: Peringkat parfum terlaris (*best-seller*) dan kontribusi keuntungan.
 - **Ekspor CSV**: Unduh data Penjualan, Stok Persediaan, dan Pengeluaran ke format CSV/Excel dengan satu klik.
 
+### 7. Progressive Web App (PWA) — Unduh & Pasang sebagai Aplikasi
+- **Bisa Diunduh Langsung**: Mendukung instalasi 1-klik sebagai aplikasi standalone di smartphone (Android, iOS Safari) maupun laptop/komputer (Chrome, Edge, macOS).
+- **Logo Resmi & Nama**: Menampilkan logo botol parfum mewah **shining.co** dengan warna latar hitam-ivory serta nama resmi di layar utama (*Home Screen*).
+- **Dukungan Offline**: Dilengkapi Service Worker berbasis Workbox untuk caching aset sehingga aplikasi dapat diakses tanpa koneksi internet.
+
 ---
 
 ## 🔒 Keamanan Database (Security Architecture)

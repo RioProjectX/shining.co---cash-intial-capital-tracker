@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export type NavTab =
   | 'dashboard'
@@ -116,6 +117,9 @@ export const Sidebar: React.FC<Props> = ({
             );
           })}
         </nav>
+
+        {/* PWA Download / Install App Section */}
+        <PWAInstallButton variant="sidebar" />
 
         {/* User Profile & Logout Footer */}
         <div className="p-4 border-t border-[#E5E1D8] bg-[#EFECE4]/60">
