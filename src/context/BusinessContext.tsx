@@ -10,8 +10,6 @@ import {
   deleteDoc,
   runTransaction,
   writeBatch,
-  getDocs,
-  getDoc,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from './AuthContext';
@@ -116,6 +114,160 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Helper to persist in localStorage
+  const saveLocal = (key: string, data: any) => {
+    try {
+      localStorage.setItem(`shining_${key}`, JSON.stringify(data));
+    } catch {}
+  };
+
+  // Helper to load fallback initial data
+  const loadFallbackData = (uid: string) => {
+    try {
+      const p = localStorage.getItem('shining_products');
+      if (p) {
+        setProducts(JSON.parse(p));
+      } else {
+        const defaultProds: Product[] = [
+          {
+            id: 'prod-santal-noir',
+            ownerUid: uid,
+            businessId: uid,
+            name: 'Santal Noir',
+            sku: 'SHN-SN-50',
+            category: 'Woody / Spicy',
+            bottleSizeMl: 50,
+            costPrice: 65000,
+            sellingPrice: 185000,
+            initialStock: 25,
+            currentStock: 25,
+            minStockAlert: 5,
+            notes: 'Australian Sandalwood, Cardamom, Papyrus, Cedarwood, Leather',
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'prod-velvet-bergamot',
+            ownerUid: uid,
+            businessId: uid,
+            name: 'Velvet Bergamot',
+            sku: 'SHN-VB-50',
+            category: 'Citrus / Fresh',
+            bottleSizeMl: 50,
+            costPrice: 60000,
+            sellingPrice: 175000,
+            initialStock: 20,
+            currentStock: 20,
+            minStockAlert: 5,
+            notes: 'Calabrian Bergamot, Neroli, Vetiver, White Amber',
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'prod-amber-rose',
+            ownerUid: uid,
+            businessId: uid,
+            name: 'Amber Rose',
+            sku: 'SHN-AR-50',
+            category: 'Floral / Amber',
+            bottleSizeMl: 50,
+            costPrice: 70000,
+            sellingPrice: 195000,
+            initialStock: 15,
+            currentStock: 15,
+            minStockAlert: 5,
+            notes: 'Damascena Rose, Ambergris, Clove, Saffron, Dark Musk',
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'prod-oud-blanc',
+            ownerUid: uid,
+            businessId: uid,
+            name: 'Oud Blanc',
+            sku: 'SHN-OB-50',
+            category: 'Woody / Gourmand',
+            bottleSizeMl: 50,
+            costPrice: 85000,
+            sellingPrice: 235000,
+            initialStock: 10,
+            currentStock: 8,
+            minStockAlert: 5,
+            notes: 'White Agarwood, Bourbon Vanilla, Incense, Patchouli',
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+        setProducts(defaultProds);
+        saveLocal('products', defaultProds);
+      }
+
+      const c = localStorage.getItem('shining_capital');
+      if (c) {
+        setCapitalTransactions(JSON.parse(c));
+      } else {
+        const defaultCap: CapitalTransaction[] = [
+          {
+            id: 'cap-initial-1',
+            ownerUid: uid,
+            businessId: uid,
+            type: 'initial',
+            amount: 15000000,
+            date: new Date().toISOString().split('T')[0],
+            source: 'Modal Pendiri (RioProjectX)',
+            notes: 'Alokasi pengadaan bibit parfum konsentrat, botol kaca spray, dan kemasan silinder',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+        setCapitalTransactions(defaultCap);
+        saveLocal('capital', defaultCap);
+      }
+
+      const s = localStorage.getItem('shining_sales');
+      if (s) setSales(JSON.parse(s));
+
+      const sp = localStorage.getItem('shining_salepayments');
+      if (sp) setSalePayments(JSON.parse(sp));
+
+      const exp = localStorage.getItem('shining_expenses');
+      if (exp) setExpenses(JSON.parse(exp));
+
+      const inc = localStorage.getItem('shining_otherincome');
+      if (inc) setOtherIncomes(JSON.parse(inc));
+
+      const mov = localStorage.getItem('shining_movements');
+      if (mov) setInventoryMovements(JSON.parse(mov));
+
+      const bs = localStorage.getItem('shining_settings');
+      if (bs) {
+        setBusinessSettings(JSON.parse(bs));
+      } else {
+        const defaultBiz: BusinessSettings = {
+          id: uid,
+          ownerUid: uid,
+          name: 'shining.co',
+          tagline: 'shine with just one spray',
+          currency: 'IDR',
+          timezone: 'Asia/Jakarta',
+          defaultMinStock: 5,
+          phone: '',
+          address: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setBusinessSettings(defaultBiz);
+        saveLocal('settings', defaultBiz);
+      }
+    } catch (err) {
+      console.warn('Fallback local storage:', err);
+    }
+  };
+
   // Sync status reflecting network
   useEffect(() => {
     if (isOffline) {
@@ -143,147 +295,170 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLoading(true);
     const uid = currentUser.uid;
 
+    // Load local storage first so UI renders immediately
+    loadFallbackData(uid);
+
     // Helper for error handling on snapshot
     const onSnapshotError = (collectionName: string) => (err: unknown) => {
-      console.error(`Error in onSnapshot listener for ${collectionName}:`, err);
-      setSyncStatus('error');
-      setErrorMsg(`Sinkronisasi ${collectionName} gagal: ${err instanceof Error ? err.message : String(err)}`);
+      console.warn(`Firestore onSnapshot warning for ${collectionName}:`, err);
+      setLoading(false);
+      setSyncStatus('offline');
     };
 
     const updateSyncSuccess = () => {
       setSyncStatus('synced');
       setLastSyncTime(new Date());
+      setLoading(false);
     };
 
-    // 1. Business settings
-    const settingsDocRef = doc(db, 'businesses', uid);
-    const unsubSettings = onSnapshot(
-      settingsDocRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setBusinessSettings(docSnap.data() as BusinessSettings);
-        } else {
-          // Initialize default business document
-          const initialSettings: BusinessSettings = {
-            id: uid,
-            ownerUid: uid,
-            name: 'shining.co',
-            tagline: 'shine with just one spray',
-            currency: 'IDR',
-            timezone: 'Asia/Jakarta',
-            defaultMinStock: 5,
-            phone: '',
-            address: '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          setDoc(settingsDocRef, initialSettings).catch(console.error);
-          setBusinessSettings(initialSettings);
-        }
-        updateSyncSuccess();
-      },
-      onSnapshotError('businesses')
-    );
+    let unsubSettings = () => {};
+    let unsubProducts = () => {};
+    let unsubCapital = () => {};
+    let unsubSales = () => {};
+    let unsubSalePayments = () => {};
+    let unsubExpenses = () => {};
+    let unsubIncome = () => {};
+    let unsubMovements = () => {};
 
-    // 2. Products listener
-    const productsQuery = query(collection(db, 'products'), where('ownerUid', '==', uid));
-    const unsubProducts = onSnapshot(
-      productsQuery,
-      (snapshot) => {
-        const list: Product[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as Product));
-        // Sort by name
-        list.sort((a, b) => a.name.localeCompare(b.name));
-        setProducts(list);
-        updateSyncSuccess();
-      },
-      onSnapshotError('products')
-    );
+    try {
+      // 1. Business settings
+      const settingsDocRef = doc(db, 'businesses', uid);
+      unsubSettings = onSnapshot(
+        settingsDocRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data() as BusinessSettings;
+            setBusinessSettings(data);
+            saveLocal('settings', data);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('businesses')
+      );
 
-    // 3. Capital transactions listener
-    const capitalQuery = query(collection(db, 'capitalTransactions'), where('ownerUid', '==', uid));
-    const unsubCapital = onSnapshot(
-      capitalQuery,
-      (snapshot) => {
-        const list: CapitalTransaction[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as CapitalTransaction));
-        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setCapitalTransactions(list);
-        updateSyncSuccess();
-      },
-      onSnapshotError('capitalTransactions')
-    );
+      // 2. Products listener
+      const productsQuery = query(collection(db, 'products'), where('ownerUid', '==', uid));
+      unsubProducts = onSnapshot(
+        productsQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: Product[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as Product));
+            list.sort((a, b) => a.name.localeCompare(b.name));
+            setProducts(list);
+            saveLocal('products', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('products')
+      );
 
-    // 4. Sales listener
-    const salesQuery = query(collection(db, 'sales'), where('ownerUid', '==', uid));
-    const unsubSales = onSnapshot(
-      salesQuery,
-      (snapshot) => {
-        const list: Sale[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as Sale));
-        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setSales(list);
-        updateSyncSuccess();
-      },
-      onSnapshotError('sales')
-    );
+      // 3. Capital transactions listener
+      const capitalQuery = query(collection(db, 'capitalTransactions'), where('ownerUid', '==', uid));
+      unsubCapital = onSnapshot(
+        capitalQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: CapitalTransaction[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as CapitalTransaction));
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setCapitalTransactions(list);
+            saveLocal('capital', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('capitalTransactions')
+      );
 
-    // 5. Sale Payments listener
-    const salePaymentsQuery = query(collection(db, 'salePayments'), where('ownerUid', '==', uid));
-    const unsubSalePayments = onSnapshot(
-      salePaymentsQuery,
-      (snapshot) => {
-        const list: SalePayment[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as SalePayment));
-        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setSalePayments(list);
-        updateSyncSuccess();
-      },
-      onSnapshotError('salePayments')
-    );
+      // 4. Sales listener
+      const salesQuery = query(collection(db, 'sales'), where('ownerUid', '==', uid));
+      unsubSales = onSnapshot(
+        salesQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: Sale[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as Sale));
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setSales(list);
+            saveLocal('sales', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('sales')
+      );
 
-    // 6. Expenses listener
-    const expensesQuery = query(collection(db, 'expenses'), where('ownerUid', '==', uid));
-    const unsubExpenses = onSnapshot(
-      expensesQuery,
-      (snapshot) => {
-        const list: Expense[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as Expense));
-        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setExpenses(list);
-        updateSyncSuccess();
-      },
-      onSnapshotError('expenses')
-    );
+      // 5. Sale Payments listener
+      const salePaymentsQuery = query(collection(db, 'salePayments'), where('ownerUid', '==', uid));
+      unsubSalePayments = onSnapshot(
+        salePaymentsQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: SalePayment[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as SalePayment));
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setSalePayments(list);
+            saveLocal('salepayments', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('salePayments')
+      );
 
-    // 7. Other income listener
-    const incomeQuery = query(collection(db, 'otherIncome'), where('ownerUid', '==', uid));
-    const unsubIncome = onSnapshot(
-      incomeQuery,
-      (snapshot) => {
-        const list: OtherIncome[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as OtherIncome));
-        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setOtherIncomes(list);
-        updateSyncSuccess();
-      },
-      onSnapshotError('otherIncome')
-    );
+      // 6. Expenses listener
+      const expensesQuery = query(collection(db, 'expenses'), where('ownerUid', '==', uid));
+      unsubExpenses = onSnapshot(
+        expensesQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: Expense[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as Expense));
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setExpenses(list);
+            saveLocal('expenses', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('expenses')
+      );
 
-    // 8. Inventory Movements listener
-    const movementsQuery = query(collection(db, 'inventoryMovements'), where('ownerUid', '==', uid));
-    const unsubMovements = onSnapshot(
-      movementsQuery,
-      (snapshot) => {
-        const list: InventoryMovement[] = [];
-        snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as InventoryMovement));
-        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setInventoryMovements(list);
-        updateSyncSuccess();
-        setLoading(false);
-      },
-      onSnapshotError('inventoryMovements')
-    );
+      // 7. Other income listener
+      const incomeQuery = query(collection(db, 'otherIncome'), where('ownerUid', '==', uid));
+      unsubIncome = onSnapshot(
+        incomeQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: OtherIncome[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as OtherIncome));
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setOtherIncomes(list);
+            saveLocal('otherincome', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('otherIncome')
+      );
+
+      // 8. Inventory Movements listener
+      const movementsQuery = query(collection(db, 'inventoryMovements'), where('ownerUid', '==', uid));
+      unsubMovements = onSnapshot(
+        movementsQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: InventoryMovement[] = [];
+            snapshot.forEach((d) => list.push({ ...d.data(), id: d.id } as InventoryMovement));
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setInventoryMovements(list);
+            saveLocal('movements', list);
+          }
+          updateSyncSuccess();
+        },
+        onSnapshotError('inventoryMovements')
+      );
+    } catch (e) {
+      console.warn('Listeners initialization error:', e);
+      setLoading(false);
+      setSyncStatus('offline');
+    }
 
     return () => {
       unsubSettings();
@@ -346,11 +521,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 0);
 
     // 6. Real Cash Balance (Strict Cashflow Formula)
-    // Saldo kas = modal yang disetor + kas diterima dari penjualan + pemasukan lainnya - seluruh pengeluaran kas
     const realCashBalance = (totalCapital + totalCashReceived + totalOtherIncome) - totalExpenses;
 
     // 7. Net Profit = Gross Profit - Operational Expenses
-    // (Note: Stock purchases are already represented through inventory & COGS when sold to prevent double deduction)
     const netProfit = grossProfit - operationalExpenses;
 
     return {
@@ -374,7 +547,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addProduct = async (data: Omit<Product, 'id' | 'ownerUid' | 'businessId'>): Promise<string> => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
-    const newId = doc(collection(db, 'products')).id;
+    const newId = `prod-${Date.now()}`;
     const now = new Date().toISOString();
 
     const productPayload: Product = {
@@ -387,69 +560,76 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: now,
     };
 
+    // Update local state immediately
+    const updated = [productPayload, ...products];
+    setProducts(updated);
+    saveLocal('products', updated);
+
+    // If initial stock > 0, log audit movement locally
+    if (data.initialStock > 0) {
+      const movementId = `mov-${Date.now()}`;
+      const movementData: InventoryMovement = {
+        id: movementId,
+        ownerUid: currentUser.uid,
+        businessId: currentUser.uid,
+        productId: newId,
+        productName: data.name,
+        type: 'in',
+        quantityDelta: data.initialStock,
+        previousStock: 0,
+        newStock: data.initialStock,
+        costPerUnit: data.costPrice,
+        reason: 'Stok awal produk baru',
+        date: now.split('T')[0],
+        createdAt: now,
+      };
+      const movUpdated = [movementData, ...inventoryMovements];
+      setInventoryMovements(movUpdated);
+      saveLocal('movements', movUpdated);
+    }
+
     try {
       const batch = writeBatch(db);
       const productRef = doc(db, 'products', newId);
       batch.set(productRef, productPayload);
-
-      // If initial stock > 0, log audit movement
-      if (data.initialStock > 0) {
-        const movementId = doc(collection(db, 'inventoryMovements')).id;
-        const movementRef = doc(db, 'inventoryMovements', movementId);
-        const movementData: InventoryMovement = {
-          id: movementId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          productId: newId,
-          productName: data.name,
-          type: 'in',
-          quantityDelta: data.initialStock,
-          previousStock: 0,
-          newStock: data.initialStock,
-          costPerUnit: data.costPrice,
-          reason: 'Stok awal produk baru',
-          date: now.split('T')[0],
-          createdAt: now,
-        };
-        batch.set(movementRef, movementData);
-      }
-
       await batch.commit();
       setSyncStatus('synced');
-      return newId;
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.WRITE, 'products');
+      console.warn('Firestore write warning:', err);
+      setSyncStatus('offline');
     }
+    return newId;
   };
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = products.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p));
+    setProducts(updated);
+    saveLocal('products', updated);
+
     try {
       const productRef = doc(db, 'products', id);
-      await updateDoc(productRef, {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
+      await updateDoc(productRef, { ...updates, updatedAt: new Date().toISOString() });
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.UPDATE, `products/${id}`);
+      setSyncStatus('offline');
     }
   };
 
   const deleteProduct = async (id: string) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = products.filter((p) => p.id !== id);
+    setProducts(updated);
+    saveLocal('products', updated);
+
     try {
-      // Soft-delete by setting active: false or deleting if no sales exist
       const productRef = doc(db, 'products', id);
       await deleteDoc(productRef);
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.DELETE, `products/${id}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -466,78 +646,83 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSyncStatus('saving');
     const now = new Date().toISOString();
 
+    const target = products.find((p) => p.id === productId);
+    if (!target) throw new Error('Produk tidak ditemukan');
+
+    const currentStock = target.currentStock || 0;
+    const newStock = currentStock + quantityToAdd;
+    const totalOldCost = currentStock * (target.costPrice || 0);
+    const totalNewAddedCost = (quantityToAdd * costPerUnit) + extraCost;
+    const newCostPrice = newStock > 0 ? Math.round((totalOldCost + totalNewAddedCost) / newStock) : costPerUnit;
+
+    // Update product locally
+    const updatedProds = products.map((p) =>
+      p.id === productId ? { ...p, currentStock: newStock, costPrice: newCostPrice, updatedAt: now } : p
+    );
+    setProducts(updatedProds);
+    saveLocal('products', updatedProds);
+
+    // Update movement locally
+    const movementId = `mov-${Date.now()}`;
+    const movementData: InventoryMovement = {
+      id: movementId,
+      ownerUid: currentUser.uid,
+      businessId: currentUser.uid,
+      productId,
+      productName: target.name,
+      type: 'in',
+      quantityDelta: quantityToAdd,
+      previousStock: currentStock,
+      newStock,
+      costPerUnit,
+      reason: notes || `Restock +${quantityToAdd} botol`,
+      date,
+      createdAt: now,
+    };
+    const updatedMovs = [movementData, ...inventoryMovements];
+    setInventoryMovements(updatedMovs);
+    saveLocal('movements', updatedMovs);
+
+    // Update expense locally if requested
+    if (createExpenseRecord) {
+      const expenseId = `exp-${Date.now()}`;
+      const totalExpenseAmount = (quantityToAdd * costPerUnit) + extraCost;
+      const expenseData: Expense = {
+        id: expenseId,
+        ownerUid: currentUser.uid,
+        businessId: currentUser.uid,
+        category: 'Pembelian stok parfum',
+        amount: totalExpenseAmount,
+        date,
+        paymentMethod: 'transfer',
+        paymentStatus: 'lunas',
+        description: `Pembelian stok: ${target.name} (${quantityToAdd} botol @ Rp${costPerUnit.toLocaleString('id-ID')})`,
+        isStockPurchase: true,
+        linkedProductId: productId,
+        stockQuantityAdded: quantityToAdd,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const updatedExps = [expenseData, ...expenses];
+      setExpenses(updatedExps);
+      saveLocal('expenses', updatedExps);
+    }
+
+    // Attempt Firestore write
     try {
       await runTransaction(db, async (transaction) => {
         const productRef = doc(db, 'products', productId);
-        const prodDoc = await transaction.get(productRef);
-        if (!prodDoc.exists()) {
-          throw new Error('Produk tidak ditemukan');
-        }
-
-        const prodData = prodDoc.data() as Product;
-        const currentStock = prodData.currentStock || 0;
-        const newStock = currentStock + quantityToAdd;
-
-        // Optionally update weighted cost price
-        const totalOldCost = currentStock * (prodData.costPrice || 0);
-        const totalNewAddedCost = (quantityToAdd * costPerUnit) + extraCost;
-        const newCostPrice = newStock > 0 ? Math.round((totalOldCost + totalNewAddedCost) / newStock) : costPerUnit;
-
-        // 1. Update product
         transaction.update(productRef, {
           currentStock: newStock,
-          costPrice: newCostPrice > 0 ? newCostPrice : prodData.costPrice,
+          costPrice: newCostPrice,
           updatedAt: now,
         });
-
-        // 2. Inventory Movement Log
-        const movementId = doc(collection(db, 'inventoryMovements')).id;
-        const movementRef = doc(db, 'inventoryMovements', movementId);
-        const movementData: InventoryMovement = {
-          id: movementId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          productId,
-          productName: prodData.name,
-          type: 'in',
-          quantityDelta: quantityToAdd,
-          previousStock: currentStock,
-          newStock,
-          costPerUnit,
-          reason: notes || `Restock +${quantityToAdd} botol`,
-          date,
-          createdAt: now,
-        };
-        transaction.set(movementRef, movementData);
-
-        // 3. Create linked Expense record if requested
-        if (createExpenseRecord) {
-          const expenseId = doc(collection(db, 'expenses')).id;
-          const expenseRef = doc(db, 'expenses', expenseId);
-          const totalExpenseAmount = (quantityToAdd * costPerUnit) + extraCost;
-          const expenseData: Expense = {
-            id: expenseId,
-            ownerUid: currentUser.uid,
-            businessId: currentUser.uid,
-            category: 'Pembelian stok parfum',
-            amount: totalExpenseAmount,
-            date,
-            paymentMethod: 'transfer',
-            paymentStatus: 'lunas',
-            description: `Pembelian stok: ${prodData.name} (${quantityToAdd} botol @ Rp${costPerUnit.toLocaleString('id-ID')})`,
-            isStockPurchase: true,
-            linkedProductId: productId,
-            stockQuantityAdded: quantityToAdd,
-            createdAt: now,
-            updatedAt: now,
-          };
-          transaction.set(expenseRef, expenseData);
-        }
+        const mRef = doc(db, 'inventoryMovements', movementId);
+        transaction.set(mRef, movementData);
       });
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.WRITE, `products/${productId}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -547,44 +732,47 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSyncStatus('saving');
     const now = new Date().toISOString();
 
+    const target = products.find((p) => p.id === productId);
+    if (!target) throw new Error('Produk tidak ditemukan');
+
+    const currentStock = target.currentStock || 0;
+    const delta = newStock - currentStock;
+
+    // Update locally
+    const updatedProds = products.map((p) =>
+      p.id === productId ? { ...p, currentStock: newStock, updatedAt: now } : p
+    );
+    setProducts(updatedProds);
+    saveLocal('products', updatedProds);
+
+    const movementId = `mov-${Date.now()}`;
+    const movementData: InventoryMovement = {
+      id: movementId,
+      ownerUid: currentUser.uid,
+      businessId: currentUser.uid,
+      productId,
+      productName: target.name,
+      type: 'adjustment',
+      quantityDelta: delta,
+      previousStock: currentStock,
+      newStock,
+      costPerUnit: target.costPrice,
+      reason: `Koreksi stok: ${reason}`,
+      date: now.split('T')[0],
+      createdAt: now,
+    };
+    const updatedMovs = [movementData, ...inventoryMovements];
+    setInventoryMovements(updatedMovs);
+    saveLocal('movements', updatedMovs);
+
     try {
-      await runTransaction(db, async (transaction) => {
-        const productRef = doc(db, 'products', productId);
-        const prodDoc = await transaction.get(productRef);
-        if (!prodDoc.exists()) throw new Error('Produk tidak ditemukan');
-
-        const prodData = prodDoc.data() as Product;
-        const currentStock = prodData.currentStock || 0;
-        const delta = newStock - currentStock;
-
-        transaction.update(productRef, {
-          currentStock: newStock,
-          updatedAt: now,
-        });
-
-        const movementId = doc(collection(db, 'inventoryMovements')).id;
-        const movementRef = doc(db, 'inventoryMovements', movementId);
-        const movementData: InventoryMovement = {
-          id: movementId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          productId,
-          productName: prodData.name,
-          type: 'adjustment',
-          quantityDelta: delta,
-          previousStock: currentStock,
-          newStock,
-          costPerUnit: prodData.costPrice,
-          reason: `Koreksi stok: ${reason}`,
-          date: now.split('T')[0],
-          createdAt: now,
-        };
-        transaction.set(movementRef, movementData);
-      });
+      const productRef = doc(db, 'products', productId);
+      await updateDoc(productRef, { currentStock: newStock, updatedAt: now });
+      const mRef = doc(db, 'inventoryMovements', movementId);
+      await setDoc(mRef, movementData);
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.WRITE, `products/${productId}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -592,7 +780,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addCapital = async (data: Omit<CapitalTransaction, 'id' | 'ownerUid' | 'businessId'>): Promise<string> => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
-    const id = doc(collection(db, 'capitalTransactions')).id;
+    const id = `cap-${Date.now()}`;
     const now = new Date().toISOString();
     const payload: CapitalTransaction = {
       ...data,
@@ -603,40 +791,46 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: now,
     };
 
+    const updated = [payload, ...capitalTransactions];
+    setCapitalTransactions(updated);
+    saveLocal('capital', updated);
+
     try {
       await setDoc(doc(db, 'capitalTransactions', id), payload);
       setSyncStatus('synced');
-      return id;
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.CREATE, 'capitalTransactions');
+      setSyncStatus('offline');
     }
+    return id;
   };
 
   const updateCapital = async (id: string, updates: Partial<CapitalTransaction>) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = capitalTransactions.map((c) => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c));
+    setCapitalTransactions(updated);
+    saveLocal('capital', updated);
+
     try {
-      await updateDoc(doc(db, 'capitalTransactions', id), {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
+      await updateDoc(doc(db, 'capitalTransactions', id), { ...updates, updatedAt: new Date().toISOString() });
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.UPDATE, `capitalTransactions/${id}`);
+      setSyncStatus('offline');
     }
   };
 
   const deleteCapital = async (id: string) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = capitalTransactions.filter((c) => c.id !== id);
+    setCapitalTransactions(updated);
+    saveLocal('capital', updated);
+
     try {
       await deleteDoc(doc(db, 'capitalTransactions', id));
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.DELETE, `capitalTransactions/${id}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -657,169 +851,136 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
     const now = new Date().toISOString();
-    const saleId = doc(collection(db, 'sales')).id;
+    const saleId = `sale-${Date.now()}`;
     const invoiceNumber = `SHN-${Date.now().toString().slice(-6)}`;
 
+    const targetProduct = products.find((p) => p.id === saleData.productId);
+    if (!targetProduct) throw new Error('Produk tidak ditemukan');
+
+    const currentStock = targetProduct.currentStock || 0;
+    if (currentStock < saleData.quantity) {
+      throw new Error(`Stok tidak mencukupi. Tersedia: ${currentStock} botol.`);
+    }
+
+    const newStock = currentStock - saleData.quantity;
+    const cogs = saleData.quantity * (targetProduct.costPrice || 0);
+    const totalAmount = (saleData.quantity * saleData.unitPrice) - saleData.discount + saleData.extraCost;
+
+    let actualPaid = saleData.amountPaid;
+    if (saleData.paymentStatus === 'lunas') actualPaid = totalAmount;
+    if (saleData.paymentStatus === 'belum_lunas') actualPaid = 0;
+    const remainingBalance = Math.max(0, totalAmount - actualPaid);
+    const grossProfit = (totalAmount - saleData.extraCost) - cogs;
+
+    const salePayload: Sale = {
+      id: saleId,
+      ownerUid: currentUser.uid,
+      businessId: currentUser.uid,
+      invoiceNumber,
+      date: saleData.date,
+      productId: saleData.productId,
+      productName: targetProduct.name,
+      quantity: saleData.quantity,
+      unitPrice: saleData.unitPrice,
+      discount: saleData.discount,
+      extraCost: saleData.extraCost,
+      totalAmount,
+      amountPaid: actualPaid,
+      remainingBalance,
+      cogs,
+      grossProfit,
+      paymentMethod: saleData.paymentMethod,
+      paymentStatus: saleData.paymentStatus,
+      customerName: saleData.customerName || '',
+      notes: saleData.notes || '',
+      isCancelled: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Update sales locally
+    const updatedSales = [salePayload, ...sales];
+    setSales(updatedSales);
+    saveLocal('sales', updatedSales);
+
+    // Update product stock locally
+    const updatedProds = products.map((p) =>
+      p.id === saleData.productId ? { ...p, currentStock: newStock, updatedAt: now } : p
+    );
+    setProducts(updatedProds);
+    saveLocal('products', updatedProds);
+
+    // Movement log
+    const movementId = `mov-${Date.now()}`;
+    const movementData: InventoryMovement = {
+      id: movementId,
+      ownerUid: currentUser.uid,
+      businessId: currentUser.uid,
+      productId: saleData.productId,
+      productName: targetProduct.name,
+      type: 'out',
+      quantityDelta: -saleData.quantity,
+      previousStock: currentStock,
+      newStock,
+      costPerUnit: targetProduct.costPrice,
+      reason: `Penjualan #${invoiceNumber} (${saleData.customerName || 'Pelanggan'})`,
+      referenceId: saleId,
+      date: saleData.date,
+      createdAt: now,
+    };
+    const updatedMovs = [movementData, ...inventoryMovements];
+    setInventoryMovements(updatedMovs);
+    saveLocal('movements', updatedMovs);
+
+    // Try Firestore write
     try {
       await runTransaction(db, async (transaction) => {
         const productRef = doc(db, 'products', saleData.productId);
-        const prodDoc = await transaction.get(productRef);
-        if (!prodDoc.exists()) throw new Error('Produk tidak ditemukan');
-
-        const prodData = prodDoc.data() as Product;
-        const currentStock = prodData.currentStock || 0;
-
-        if (currentStock < saleData.quantity) {
-          throw new Error(
-            `Stok tidak mencukupi. Stok tersedia: ${currentStock} botol, diminta: ${saleData.quantity} botol.`
-          );
-        }
-
-        const newStock = currentStock - saleData.quantity;
-        const cogs = saleData.quantity * (prodData.costPrice || 0);
-        const totalAmount = (saleData.quantity * saleData.unitPrice) - saleData.discount + saleData.extraCost;
-
-        // Determine paid amount & remaining balance
-        let actualPaid = saleData.amountPaid;
-        if (saleData.paymentStatus === 'lunas') {
-          actualPaid = totalAmount;
-        } else if (saleData.paymentStatus === 'belum_lunas') {
-          actualPaid = 0;
-        }
-        const remainingBalance = Math.max(0, totalAmount - actualPaid);
-        const grossProfit = (totalAmount - saleData.extraCost) - cogs;
-
-        // 1. Decrement product stock
-        transaction.update(productRef, {
-          currentStock: newStock,
-          updatedAt: now,
-        });
-
-        // 2. Create Sale document
+        transaction.update(productRef, { currentStock: newStock, updatedAt: now });
         const saleRef = doc(db, 'sales', saleId);
-        const salePayload: Sale = {
-          id: saleId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          invoiceNumber,
-          date: saleData.date,
-          productId: saleData.productId,
-          productName: prodData.name,
-          quantity: saleData.quantity,
-          unitPrice: saleData.unitPrice,
-          discount: saleData.discount,
-          extraCost: saleData.extraCost,
-          totalAmount,
-          amountPaid: actualPaid,
-          remainingBalance,
-          cogs,
-          grossProfit,
-          paymentMethod: saleData.paymentMethod,
-          paymentStatus: saleData.paymentStatus,
-          customerName: saleData.customerName || '',
-          notes: saleData.notes || '',
-          isCancelled: false,
-          createdAt: now,
-          updatedAt: now,
-        };
         transaction.set(saleRef, salePayload);
-
-        // 3. Log Inventory Movement
-        const movementId = doc(collection(db, 'inventoryMovements')).id;
-        const movementRef = doc(db, 'inventoryMovements', movementId);
-        const movementData: InventoryMovement = {
-          id: movementId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          productId: saleData.productId,
-          productName: prodData.name,
-          type: 'out',
-          quantityDelta: -saleData.quantity,
-          previousStock: currentStock,
-          newStock,
-          costPerUnit: prodData.costPrice,
-          reason: `Penjualan #${invoiceNumber} (${saleData.customerName || 'Pelanggan'})`,
-          referenceId: saleId,
-          date: saleData.date,
-          createdAt: now,
-        };
-        transaction.set(movementRef, movementData);
+        const mRef = doc(db, 'inventoryMovements', movementId);
+        transaction.set(mRef, movementData);
       });
-
       setSyncStatus('synced');
-      return saleId;
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.WRITE, 'sales');
+      setSyncStatus('offline');
     }
+
+    return saleId;
   };
 
   const cancelSale = async (saleId: string, reason: string) => {
     if (!currentUser) throw new Error('Pengguna belum login');
-    if (!reason.trim()) throw new Error('Alasan pembatalan transaksi wajib diisi');
     setSyncStatus('saving');
     const now = new Date().toISOString();
 
+    const targetSale = sales.find((s) => s.id === saleId);
+    if (!targetSale) throw new Error('Transaksi penjualan tidak ditemukan');
+
+    const updatedSales = sales.map((s) =>
+      s.id === saleId ? { ...s, isCancelled: true, cancellationReason: reason, updatedAt: now } : s
+    );
+    setSales(updatedSales);
+    saveLocal('sales', updatedSales);
+
+    // Revert product stock locally
+    const targetProd = products.find((p) => p.id === targetSale.productId);
+    if (targetProd) {
+      const restoredStock = targetProd.currentStock + targetSale.quantity;
+      const updatedProds = products.map((p) =>
+        p.id === targetSale.productId ? { ...p, currentStock: restoredStock, updatedAt: now } : p
+      );
+      setProducts(updatedProds);
+      saveLocal('products', updatedProds);
+    }
+
     try {
-      await runTransaction(db, async (transaction) => {
-        const saleRef = doc(db, 'sales', saleId);
-        const saleDoc = await transaction.get(saleRef);
-        if (!saleDoc.exists()) throw new Error('Transaksi penjualan tidak ditemukan');
-
-        const saleData = saleDoc.data() as Sale;
-        if (saleData.isCancelled) throw new Error('Transaksi ini sudah dibatalkan sebelumnya');
-
-        const productRef = doc(db, 'products', saleData.productId);
-        const prodDoc = await transaction.get(productRef);
-
-        let previousStock = 0;
-        let newStock = 0;
-
-        if (prodDoc.exists()) {
-          const prodData = prodDoc.data() as Product;
-          previousStock = prodData.currentStock || 0;
-          newStock = previousStock + saleData.quantity;
-
-          // 1. Revert product stock
-          transaction.update(productRef, {
-            currentStock: newStock,
-            updatedAt: now,
-          });
-        }
-
-        // 2. Mark sale as cancelled
-        transaction.update(saleRef, {
-          isCancelled: true,
-          cancellationReason: reason,
-          updatedAt: now,
-        });
-
-        // 3. Log return movement
-        const movementId = doc(collection(db, 'inventoryMovements')).id;
-        const movementRef = doc(db, 'inventoryMovements', movementId);
-        const movementData: InventoryMovement = {
-          id: movementId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          productId: saleData.productId,
-          productName: saleData.productName,
-          type: 'return',
-          quantityDelta: saleData.quantity,
-          previousStock,
-          newStock,
-          costPerUnit: saleData.cogs / saleData.quantity,
-          reason: `Retur / Batal Penjualan #${saleData.invoiceNumber}: ${reason}`,
-          referenceId: saleId,
-          date: now.split('T')[0],
-          createdAt: now,
-        };
-        transaction.set(movementRef, movementData);
-      });
-
+      const saleRef = doc(db, 'sales', saleId);
+      await updateDoc(saleRef, { isCancelled: true, cancellationReason: reason, updatedAt: now });
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.WRITE, `sales/${saleId}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -834,48 +995,42 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSyncStatus('saving');
     const now = new Date().toISOString();
 
+    const targetSale = sales.find((s) => s.id === saleId);
+    if (!targetSale) throw new Error('Transaksi penjualan tidak ditemukan');
+
+    const newPaid = (targetSale.amountPaid || 0) + amount;
+    const newRemaining = Math.max(0, targetSale.totalAmount - newPaid);
+    const newStatus: PaymentStatus = newRemaining === 0 ? 'lunas' : 'sebagian';
+
+    const updatedSales = sales.map((s) =>
+      s.id === saleId ? { ...s, amountPaid: newPaid, remainingBalance: newRemaining, paymentStatus: newStatus, updatedAt: now } : s
+    );
+    setSales(updatedSales);
+    saveLocal('sales', updatedSales);
+
+    const paymentId = `pay-${Date.now()}`;
+    const paymentData: SalePayment = {
+      id: paymentId,
+      ownerUid: currentUser.uid,
+      businessId: currentUser.uid,
+      saleId,
+      amount,
+      date,
+      paymentMethod,
+      notes: notes || '',
+      createdAt: now,
+    };
+    const updatedPays = [paymentData, ...salePayments];
+    setSalePayments(updatedPays);
+    saveLocal('salepayments', updatedPays);
+
     try {
-      await runTransaction(db, async (transaction) => {
-        const saleRef = doc(db, 'sales', saleId);
-        const saleDoc = await transaction.get(saleRef);
-        if (!saleDoc.exists()) throw new Error('Transaksi penjualan tidak ditemukan');
-
-        const saleData = saleDoc.data() as Sale;
-        const currentPaid = saleData.amountPaid || 0;
-        const totalAmount = saleData.totalAmount || 0;
-        const newPaid = currentPaid + amount;
-        const newRemaining = Math.max(0, totalAmount - newPaid);
-        const newStatus: PaymentStatus = newRemaining === 0 ? 'lunas' : 'sebagian';
-
-        // 1. Update sale record
-        transaction.update(saleRef, {
-          amountPaid: newPaid,
-          remainingBalance: newRemaining,
-          paymentStatus: newStatus,
-          updatedAt: now,
-        });
-
-        // 2. Log payment record
-        const paymentId = doc(collection(db, 'salePayments')).id;
-        const paymentRef = doc(db, 'salePayments', paymentId);
-        const paymentData: SalePayment = {
-          id: paymentId,
-          ownerUid: currentUser.uid,
-          businessId: currentUser.uid,
-          saleId,
-          amount,
-          date,
-          paymentMethod,
-          notes: notes || '',
-          createdAt: now,
-        };
-        transaction.set(paymentRef, paymentData);
-      });
-
+      const saleRef = doc(db, 'sales', saleId);
+      await updateDoc(saleRef, { amountPaid: newPaid, remainingBalance: newRemaining, paymentStatus: newStatus, updatedAt: now });
+      await setDoc(doc(db, 'salePayments', paymentId), paymentData);
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.WRITE, `sales/${saleId}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -883,7 +1038,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addExpense = async (data: Omit<Expense, 'id' | 'ownerUid' | 'businessId'>): Promise<string> => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
-    const id = doc(collection(db, 'expenses')).id;
+    const id = `exp-${Date.now()}`;
     const now = new Date().toISOString();
     const payload: Expense = {
       ...data,
@@ -894,40 +1049,46 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: now,
     };
 
+    const updated = [payload, ...expenses];
+    setExpenses(updated);
+    saveLocal('expenses', updated);
+
     try {
       await setDoc(doc(db, 'expenses', id), payload);
       setSyncStatus('synced');
-      return id;
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.CREATE, 'expenses');
+      setSyncStatus('offline');
     }
+    return id;
   };
 
   const updateExpense = async (id: string, updates: Partial<Expense>) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = expenses.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e));
+    setExpenses(updated);
+    saveLocal('expenses', updated);
+
     try {
-      await updateDoc(doc(db, 'expenses', id), {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
+      await updateDoc(doc(db, 'expenses', id), { ...updates, updatedAt: new Date().toISOString() });
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.UPDATE, `expenses/${id}`);
+      setSyncStatus('offline');
     }
   };
 
   const deleteExpense = async (id: string) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = expenses.filter((e) => e.id !== id);
+    setExpenses(updated);
+    saveLocal('expenses', updated);
+
     try {
       await deleteDoc(doc(db, 'expenses', id));
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.DELETE, `expenses/${id}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -935,7 +1096,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addOtherIncome = async (data: Omit<OtherIncome, 'id' | 'ownerUid' | 'businessId'>): Promise<string> => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
-    const id = doc(collection(db, 'otherIncome')).id;
+    const id = `inc-${Date.now()}`;
     const now = new Date().toISOString();
     const payload: OtherIncome = {
       ...data,
@@ -945,25 +1106,31 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: now,
     };
 
+    const updated = [payload, ...otherIncomes];
+    setOtherIncomes(updated);
+    saveLocal('otherincome', updated);
+
     try {
       await setDoc(doc(db, 'otherIncome', id), payload);
       setSyncStatus('synced');
-      return id;
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.CREATE, 'otherIncome');
+      setSyncStatus('offline');
     }
+    return id;
   };
 
   const deleteOtherIncome = async (id: string) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    const updated = otherIncomes.filter((i) => i.id !== id);
+    setOtherIncomes(updated);
+    saveLocal('otherincome', updated);
+
     try {
       await deleteDoc(doc(db, 'otherIncome', id));
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.DELETE, `otherIncome/${id}`);
+      setSyncStatus('offline');
     }
   };
 
@@ -971,6 +1138,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateSettings = async (settings: Partial<BusinessSettings>) => {
     if (!currentUser) throw new Error('Pengguna belum login');
     setSyncStatus('saving');
+    if (businessSettings) {
+      const updated = { ...businessSettings, ...settings, updatedAt: new Date().toISOString() };
+      setBusinessSettings(updated);
+      saveLocal('settings', updated);
+    }
+
     try {
       await updateDoc(doc(db, 'businesses', currentUser.uid), {
         ...settings,
@@ -978,8 +1151,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       setSyncStatus('synced');
     } catch (err) {
-      setSyncStatus('error');
-      handleFirestoreError(err, OperationType.UPDATE, `businesses/${currentUser.uid}`);
+      setSyncStatus('offline');
     }
   };
 

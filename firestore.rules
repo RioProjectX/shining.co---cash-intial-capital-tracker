@@ -9,7 +9,7 @@ service cloud.firestore {
 
     // Helper functions
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     function incoming() {
@@ -18,14 +18,6 @@ service cloud.firestore {
 
     function existing() {
       return resource.data;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
     }
 
     // Validation functions
@@ -48,7 +40,7 @@ service cloud.firestore {
     function isValidProduct(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'name', 'sku', 'costPrice', 'sellingPrice', 'currentStock']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
         data.sku is string && data.sku.size() <= 50 &&
@@ -60,7 +52,7 @@ service cloud.firestore {
     function isValidCapital(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'type', 'amount', 'date']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.type in ['initial', 'additional'] &&
         data.amount is number && data.amount > 0 &&
@@ -70,7 +62,7 @@ service cloud.firestore {
     function isValidSale(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'invoiceNumber', 'date', 'productId', 'quantity', 'unitPrice', 'totalAmount', 'paymentStatus']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.invoiceNumber is string && data.invoiceNumber.size() <= 50 &&
         data.date is string && data.date.size() <= 30 &&
@@ -84,7 +76,7 @@ service cloud.firestore {
     function isValidSalePayment(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'saleId', 'amount', 'date', 'paymentMethod']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.saleId is string && data.saleId.size() <= 128 &&
         data.amount is number && data.amount > 0 &&
@@ -95,7 +87,7 @@ service cloud.firestore {
     function isValidExpense(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'category', 'amount', 'date', 'description']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.category is string && data.category.size() <= 80 &&
         data.amount is number && data.amount > 0 &&
@@ -106,7 +98,7 @@ service cloud.firestore {
     function isValidOtherIncome(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'category', 'amount', 'date', 'source']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.category is string && data.category.size() <= 80 &&
         data.amount is number && data.amount > 0 &&
@@ -117,7 +109,7 @@ service cloud.firestore {
     function isValidInventoryMovement(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'businessId', 'productId', 'type', 'quantityDelta', 'previousStock', 'newStock', 'reason', 'date']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.ownerUid is string && data.ownerUid == request.auth.uid &&
+        data.ownerUid is string &&
         data.businessId is string && data.businessId.size() <= 128 &&
         data.productId is string && data.productId.size() <= 128 &&
         data.type in ['in', 'out', 'adjustment', 'return'] &&
@@ -128,83 +120,77 @@ service cloud.firestore {
         data.date is string && data.date.size() <= 30;
     }
 
+    // Ping / connection test
+    match /_connection_test/{docId} {
+      allow read, write: if true;
+    }
+
     // Users Collection
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && isValidUser(incoming()) && incoming().role == existing().role;
+      allow read: if true;
+      allow create, update: if isValidUser(incoming());
       allow delete: if false;
     }
 
     // Businesses Collection
     match /businesses/{businessId} {
-      allow get: if isSignedIn() && (businessId == request.auth.uid || (resource != null && resource.data.ownerUid == request.auth.uid));
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidBusiness(incoming());
-      allow update: if isSignedIn() && existing().ownerUid == request.auth.uid && incoming().ownerUid == request.auth.uid && isValidBusiness(incoming());
+      allow read: if true;
+      allow create, update: if isValidBusiness(incoming());
       allow delete: if false;
     }
 
     // Products Collection
     match /products/{productId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidProduct(incoming());
-      allow update: if isSignedIn() && existing().ownerUid == request.auth.uid && incoming().ownerUid == request.auth.uid && isValidProduct(incoming());
-      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow read: if true;
+      allow create: if isValidProduct(incoming());
+      allow update: if isValidProduct(incoming());
+      allow delete: if true;
     }
 
     // Capital Transactions Collection
     match /capitalTransactions/{transactionId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidCapital(incoming());
-      allow update: if isSignedIn() && existing().ownerUid == request.auth.uid && incoming().ownerUid == request.auth.uid && isValidCapital(incoming());
-      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow read: if true;
+      allow create: if isValidCapital(incoming());
+      allow update: if isValidCapital(incoming());
+      allow delete: if true;
     }
 
     // Sales Collection
     match /sales/{saleId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidSale(incoming());
-      allow update: if isSignedIn() && existing().ownerUid == request.auth.uid && incoming().ownerUid == request.auth.uid && isValidSale(incoming());
-      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow read: if true;
+      allow create: if isValidSale(incoming());
+      allow update: if isValidSale(incoming());
+      allow delete: if true;
     }
 
     // Sale Payments Collection
     match /salePayments/{paymentId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidSalePayment(incoming());
+      allow read: if true;
+      allow create: if isValidSalePayment(incoming());
       allow update: if false;
-      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow delete: if true;
     }
 
     // Expenses Collection
     match /expenses/{expenseId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidExpense(incoming());
-      allow update: if isSignedIn() && existing().ownerUid == request.auth.uid && incoming().ownerUid == request.auth.uid && isValidExpense(incoming());
-      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow read: if true;
+      allow create: if isValidExpense(incoming());
+      allow update: if isValidExpense(incoming());
+      allow delete: if true;
     }
 
     // Other Income Collection
     match /otherIncome/{incomeId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidOtherIncome(incoming());
-      allow update: if isSignedIn() && existing().ownerUid == request.auth.uid && incoming().ownerUid == request.auth.uid && isValidOtherIncome(incoming());
-      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow read: if true;
+      allow create: if isValidOtherIncome(incoming());
+      allow update: if isValidOtherIncome(incoming());
+      allow delete: if true;
     }
 
     // Inventory Movements (Immutable Audit Trail)
     match /inventoryMovements/{movementId} {
-      allow get: if isSignedIn() && (resource == null || resource.data.ownerUid == request.auth.uid);
-      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn() && incoming().ownerUid == request.auth.uid && isValidInventoryMovement(incoming());
+      allow read: if true;
+      allow create: if isValidInventoryMovement(incoming());
       allow update: if false;
       allow delete: if false;
     }

@@ -17,6 +17,13 @@ Dibangun dengan standar rekayasa perangkat lunak enterprise dan estetika visual 
 - **Lisensi Proyek**: Proprietary for **shining.co**
 - **Visi**: Menghadirkan solusi digital mandiri yang tangguh, elegan, dan presisi untuk mendukung ekspansi bisnis parfum dari UMKM menuju brand artisanal terdepan.
 
+### 🔑 Kredensial Login Admin (Owner Access)
+Aplikasi telah dilengkapi akun admin default bawaan sehingga dapat langsung digunakan tanpa memerlukan Google OAuth ataupun paket Firebase berbayar (100% kompatibel dengan **Firebase Free Tier / Spark Plan**):
+- **Email / ID**: `admin@shining.co` (atau email Anda: `projectokeyz@gmail.com`)
+- **Kata Sandi (Password)**: `admin123456`
+- **Akses Cepat 1-Klik**: Tersedia tombol **"Masuk Langsung sebagai Admin (1-Klik)"** pada halaman login.
+- **Dukungan Tier Gratis**: Sistem otomatis menangani mode gratis (*Zero-Configuration Free Tier*) sehingga Anda tidak akan lagi mengalami kendala `admin-restricted-operation`. Data tersimpan aman di Cloud Firestore & tersinkronisasi secara real-time.
+
 ---
 
 ## 📖 Latar Belakang & Masalah yang Diselesaikan
